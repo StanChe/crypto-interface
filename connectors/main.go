@@ -1,7 +1,6 @@
 package connectors
 
 import (
-	"cryptagio-walle/dao/models"
 	"fmt"
 	"math/big"
 
@@ -42,7 +41,7 @@ type UtxStruct struct {
 type OutStruct struct {
 	Address               string
 	Amount                decimal.Decimal
-	Currency              *models.Currency
+	Currency              Currency
 	Memo                  string
 	SubtractFeeFromAmount bool
 	IsChange              bool
@@ -57,6 +56,14 @@ type TxStatusStruct struct {
 	IsIrreversible bool
 }
 
+// NewTxStatusWithNonNeg creates a new TxStatusStruct gets number of confirmations. If the number of confirmations is negative returns zero.
+func NewTxStatusWithNonNeg(h, c int64) TxStatusStruct {
+	if c < 0 {
+		c = 0
+	}
+	return TxStatusStruct{Height: h, Conf: uint64(c)}
+}
+
 // TxInSignatures - signatures array for a tx input
 type TxInSignatures []string
 
@@ -64,6 +71,28 @@ type TxInSignatures []string
 type TxSignatures []TxInSignatures
 
 type (
+	// Currency provides info about the currency.
+	Currency interface {
+		// GetCode is the code of the currency (i.e. BTC/ETH/USDT). It's usually capitalized.
+		GetCode() string
+		// GetPrecision gets the maximum number of decimal points of the currency.
+		GetPrecision() uint8
+		// GetTokenAddress gets the address of the contract of the currency (if applicable). If not applicable - returns an emppty string.
+		GetTokenAddress() string
+		// GetTokenCode gets an integer code of the currency (if applicable). If not applicable - returns 0.
+		GetTokenCode() int64
+	}
+
+	// BalanceProvider is an interface for getting sum of the balances on specified addresses.
+	BalanceProvider interface {
+		BalanceGet(currency Currency, address ...string) (AddressBalance, error)
+	}
+	// AddressValidator is an interface for verifying whether the address is valid for the blockchain.
+	// If it returns true - we are safe to send coins to that address.
+	AddressValidator interface {
+		ValidateAddress(address string) (bool, error)
+	}
+
 	TxBuilder interface {
 		TxBuild(walletData *WalletSignStruct, utxos interface{}, output []*OutStruct) (string, error)
 		TxRebuild(txHex string, signatures TxSignatures) (string, error)
@@ -80,11 +109,11 @@ type (
 		TxGetter
 		TxBuilder
 		TxSender
+		BalanceProvider
+		AddressValidator
 		CurrencyCode() string
 		WalletID() uint64
 		GetWalletType() string
-		BalanceGet(currency models.Currency, address ...string) (*AddressBalance, error)
-		ValidateAddress(address string) (bool, error)
 	}
 
 	Connector struct {
@@ -94,7 +123,8 @@ type (
 	}
 )
 
-var TxPermanentFailure = fmt.Errorf("transaction filed permanently")
+// TxPermanentFailure indicates a permanent failure for a tx - their is no need to try to broadcast the tx that returns such error.
+var TxPermanentFailure = fmt.Errorf("transaction failed permanently")
 
 func (c *Connector) CurrencyCode() string {
 	return c.Currency
