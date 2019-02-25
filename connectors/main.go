@@ -92,14 +92,20 @@ type (
 	AddressValidator interface {
 		ValidateAddress(address string) (bool, error)
 	}
-
+	// TxBuilder is an interface for building transactions.
 	TxBuilder interface {
-		TxBuild(walletData *WalletSignStruct, utxos interface{}, output []*OutStruct) (string, error)
+		TxBuild(walletData *WalletSignStruct, utxos interface{}, output []OutStruct) (string, error)
+		// TxRebuild combines raw txHex (built with TxBuild) with signatures from the signer
+		// and produces a transaction with signatures that is ready for broadcasting.
 		TxRebuild(txHex string, signatures TxSignatures) (string, error)
 	}
+
+	// TxGetter is an interface for getting tx status from chain.
 	TxGetter interface {
 		TxStatus(txID string, blockNo uint64) (*TxStatusStruct, error)
 	}
+
+	// TxSender is an interface for transaction broadcasting.
 	TxSender interface {
 		TxBroadcast(txHex string) (txHash string, err error)
 	}
