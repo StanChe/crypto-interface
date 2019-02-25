@@ -10,8 +10,7 @@ import (
 	"github.com/btcsuite/btcutil"
 	btckeychain "github.com/btcsuite/btcutil/hdkeychain"
 
-	"cryptagio-walle/conf"
-	"cryptagio-walle/services/address/hd"
+	"github.com/stanche/crypto-interface/address/hd"
 )
 
 const MaxSigners = 15
@@ -28,7 +27,7 @@ func New() Generator {
 
 // AddressGenerate - main function for wallet service address generation
 func (g Generator) AddressGenerate(params hd.GeneratorParameters) (address string, err error) {
-	netParams := conf.BtcNetParams
+	netParams := btcchaincfg.TestNet3Params
 	return g.AddressGenerateForNet(params, netParams)
 }
 

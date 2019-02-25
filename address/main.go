@@ -1,7 +1,7 @@
 package address
 
 import (
-	"cryptagio-walle/services/address/hd"
+	"github.com/stanche/crypto-interface/address/hd"
 )
 
 type (
