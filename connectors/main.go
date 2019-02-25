@@ -2,75 +2,13 @@ package connectors
 
 import (
 	"fmt"
-	"math/big"
-
-	"github.com/wedancedalot/decimal"
 )
 
-// AddressBalance contains confirmed, unconfirmed and unmatured
-type AddressBalance struct {
-	Confirmed   decimal.Decimal
-	Unconfirmed decimal.Decimal
-	Unmatured   decimal.Decimal
-}
-
-// UtxoStruct defines return record from Utxos()
-type UtxoStruct struct {
-	TxHash  string
-	Height  int
-	TxPos   int
-	Value   decimal.Decimal
-	Address string
-}
-
-// WalletSignStruct - wallet parameters for Electrum
-type WalletSignStruct struct {
-	Signers uint8
-	XPubs   []string
-}
-
-// UtxStruct defines Tx inputs for Electrum
-type UtxStruct struct {
-	TxHash string
-	TxPos  int
-	//Value  decimal.Decimal
-	Index uint32
-}
-
-// OutStruct - defines outputs
-type OutStruct struct {
-	Address               string
-	Amount                decimal.Decimal
-	Currency              Currency
-	Memo                  string
-	SubtractFeeFromAmount bool
-	IsChange              bool
-}
-
-// TxStatusStruct defines response from Connector.TxGet()
-// int64 used as answer could contain (-1, -1) in case of fork when the Tx was discarded
-type TxStatusStruct struct {
-	Height         int64
-	Conf           uint64
-	Fee            *big.Int
-	IsIrreversible bool
-}
-
-// NewTxStatusWithNonNeg creates a new TxStatusStruct gets number of confirmations. If the number of confirmations is negative returns zero.
-func NewTxStatusWithNonNeg(h, c int64) TxStatusStruct {
-	if c < 0 {
-		c = 0
-	}
-	return TxStatusStruct{Height: h, Conf: uint64(c)}
-}
-
-// TxInSignatures - signatures array for a tx input
-type TxInSignatures []string
-
-// TxSignatures - signatures set for the tx
-type TxSignatures []TxInSignatures
-
 type (
+	// TxInSignatures - signatures array for a tx input
+	TxInSignatures []string
+	// TxSignatures - signatures set for the tx
+	TxSignatures []TxInSignatures
 	// Currency provides info about the currency.
 	Currency interface {
 		// GetCode is the code of the currency (i.e. BTC/ETH/USDT). It's usually capitalized.
@@ -121,27 +59,9 @@ type (
 		WalletID() uint64
 		GetWalletType() string
 	}
-
-	Connector struct {
-		WalletId   uint64
-		Currency   string
-		WalletType string
-	}
 )
 
 // TxPermanentFailure indicates a permanent failure for a tx - their is no need to try to broadcast the tx that returns such error.
 var TxPermanentFailure = fmt.Errorf("transaction failed permanently")
-
-func (c *Connector) CurrencyCode() string {
-	return c.Currency
-}
-
-func (c *Connector) WalletID() uint64 {
-	return c.WalletId
-}
-
-func (c *Connector) GetWalletType() string {
-	return c.WalletType
-}
 
 var ErrNotFound = fmt.Errorf("not found")
