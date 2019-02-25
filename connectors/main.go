@@ -15,15 +15,6 @@ type AddressBalance struct {
 	Unmatured   decimal.Decimal
 }
 
-// Add creates a new AddressBalance instance with the sum of the balances
-func (a AddressBalance) Add(b AddressBalance) AddressBalance {
-	return AddressBalance{
-		Confirmed:   a.Confirmed.Add(b.Confirmed),
-		Unconfirmed: a.Unconfirmed.Add(b.Unconfirmed),
-		Unmatured:   a.Unmatured.Add(b.Unmatured),
-	}
-}
-
 // UtxoStruct defines return record from Utxos()
 type UtxoStruct struct {
 	TxHash  string
@@ -55,27 +46,6 @@ type OutStruct struct {
 	Memo                  string
 	SubtractFeeFromAmount bool
 	IsChange              bool
-}
-
-// InputParsed - describes return of TxParse
-type InputParsed struct {
-	PrevOutHash string
-	PrevOutPos  int
-	Sequence    uint
-	XPubkeys    []*string
-	//Pubkeys []*string
-	Type         string
-	Signers      int
-	ScriptSig    string
-	RedeemScript string
-	//Signatures []*string
-}
-
-// OutputParsed - describes return of TxParse
-type OutputParsed struct {
-	Address string
-	Value   *big.Int
-	TxPos   uint
 }
 
 // TxStatusStruct defines response from Connector.TxGet()
