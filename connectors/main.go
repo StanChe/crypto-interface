@@ -21,6 +21,14 @@ type (
 		GetTokenCode() int64
 	}
 
+	// Address provides info about the wallet address
+	Address interface {
+		// GetAddress is the address itself
+		GetAddress() string
+		// GetTag returns the tag or memo property for currencies, that uses it
+		GetTag() string
+	}
+
 	// BalanceProvider is an interface for getting sum of the balances on specified addresses.
 	BalanceProvider interface {
 		BalanceGet(currency Currency, address ...string) (AddressBalance, error)
@@ -64,4 +72,7 @@ type (
 // TxPermanentFailure indicates a permanent failure for a tx - their is no need to try to broadcast the tx that returns such error.
 var TxPermanentFailure = fmt.Errorf("transaction failed permanently")
 
-var ErrNotFound = fmt.Errorf("not found")
+var (
+	ErrNotFound  = fmt.Errorf("not found")
+	ErrClientNil = fmt.Errorf("client is nil")
+)
