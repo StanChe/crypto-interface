@@ -264,7 +264,7 @@ func TestBtcBlockChainImporter_parseOutputs(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    []outputParsed
+		want    []OutputParsed
 		wantErr bool
 	}{
 		// TODO: Add test cases.

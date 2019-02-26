@@ -2,6 +2,9 @@ package btc_example
 
 import (
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
@@ -9,8 +12,6 @@ import (
 	"github.com/stanche/crypto-interface/connector"
 	"github.com/stanche/crypto-interface/importer"
 	"github.com/wedancedalot/decimal"
-	"math/big"
-	"strings"
 )
 
 type (
@@ -20,8 +21,8 @@ type (
 		txBatchSize int
 	}
 
-	// outputParsed - describes return of TxParse
-	outputParsed struct {
+	// OutputParsed - describes return of TxParse
+	OutputParsed struct {
 		Address string
 		Value   *big.Int
 		TxPos   uint
@@ -195,9 +196,9 @@ func (bci BtcBlockChainImporter) processTransaction(d processTxData) processTxRe
 	return processTxResponse{ops: operations, err: err}
 }
 
-// parseOutputs parses all BTC outputs and returns in convenient format outputParsed
-func (bci BtcBlockChainImporter) parseOutputs(txOuts []*wire.TxOut) ([]outputParsed, error) {
-	var outputs []outputParsed
+// parseOutputs parses all BTC outputs and returns in convenient format OutputParsed
+func (bci BtcBlockChainImporter) parseOutputs(txOuts []*wire.TxOut) ([]OutputParsed, error) {
+	var outputs []OutputParsed
 	for i, txOut := range txOuts {
 		_, addresses, _, err := txscript.ExtractPkScriptAddrs(txOut.PkScript, &bci.chainParams)
 		if err != nil {
@@ -206,7 +207,7 @@ func (bci BtcBlockChainImporter) parseOutputs(txOuts []*wire.TxOut) ([]outputPar
 		}
 
 		for _, address := range addresses {
-			outputs = append(outputs, outputParsed{
+			outputs = append(outputs, OutputParsed{
 				Address: address.EncodeAddress(),
 				Value:   big.NewInt(txOut.Value),
 				TxPos:   uint(i),

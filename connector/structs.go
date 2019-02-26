@@ -7,6 +7,23 @@ import (
 )
 
 type (
+	NodeParams struct {
+		Host     string
+		Port     int
+		User     string
+		Password string
+	}
+	WalletParams struct {
+		Currency       string
+		Active         bool
+		Type           string
+		Node           NodeParams
+		ChainConfig    string
+		NodeTimeoutSec int
+		FeeMax         int
+		Core           NodeParams
+		Debug          bool
+	}
 	// AddressBalance contains confirmed, unconfirmed and unmatured
 	AddressBalance struct {
 		Confirmed   decimal.Decimal
@@ -36,6 +53,11 @@ type (
 		//Value  decimal.Decimal
 		Index uint32
 	}
+	OutputParsed struct {
+		Address string
+		Value   *big.Int
+		TxPos   uint
+	}
 
 	// OutStruct - defines outputs
 	OutStruct struct {
@@ -63,4 +85,22 @@ func NewTxStatusWithNonNeg(h, c int64) TxStatusStruct {
 		c = 0
 	}
 	return TxStatusStruct{Height: h, Conf: uint64(c)}
+}
+
+type Connector struct {
+	WalletId   uint64
+	Currency   string
+	WalletType string
+}
+
+func (c *Connector) CurrencyCode() string {
+	return c.Currency
+}
+
+func (c *Connector) WalletID() uint64 {
+	return c.WalletId
+}
+
+func (c *Connector) GetWalletType() string {
+	return c.WalletType
 }
