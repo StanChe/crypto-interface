@@ -36,6 +36,7 @@ type (
 		addresses   []connectors.Address
 	}
 
+	// processTxData is used for processTransaction func as return
 	processTxResponse struct {
 		ops []importer.Operation
 		err error
@@ -143,25 +144,26 @@ func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []c
 	}
 
 	if len(errors) > 0 { //return all collected errors at once
-		var errMsg string
+		var sb strings.Builder
 		for _, err := range errors {
-			errMsg += fmt.Sprintf("%#v \n", err)
+			sb.WriteString(fmt.Sprintf("%#v \n", err))
 		}
-		return operations, fmt.Errorf(errMsg)
+		return operations, fmt.Errorf(sb.String())
 	}
 
 	return operations, nil
 }
 
 // min returns a minimal value of a and b
-func (bci BtcBlockChainImporter) min(a, b int) int {
+func (BtcBlockChainImporter) min(a, b int) int {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func (bci BtcBlockChainImporter) isAddressInList(target string, addresses []connectors.Address) bool {
+// isAddressInList returns true if target address in given addresses
+func (BtcBlockChainImporter) isAddressInList(target string, addresses []connectors.Address) bool {
 	for _, a := range addresses {
 		if strings.EqualFold(target, a.GetAddress()) {
 			return true
