@@ -7,7 +7,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/stanche/crypto-interface/connectors"
+	"github.com/stanche/crypto-interface/connector"
 	"github.com/stanche/crypto-interface/importer"
 )
 
@@ -125,8 +125,8 @@ func TestBtcBlockChainImporter_ProcessBlock(t *testing.T) {
 	}
 	type args struct {
 		blockNumber uint64
-		currencies  []connectors.Currency
-		addresses   []connectors.Address
+		currencies  []connector.Currency
+		addresses   []connector.Address
 	}
 	tests := []struct {
 		name           string
@@ -196,7 +196,7 @@ func TestBtcBlockChainImporter_isAddressInList(t *testing.T) {
 	}
 	type args struct {
 		target    string
-		addresses []connectors.Address
+		addresses []connector.Address
 	}
 	tests := []struct {
 		name   string

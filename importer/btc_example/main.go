@@ -6,7 +6,7 @@ import (
 	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/stanche/crypto-interface/connectors"
+	"github.com/stanche/crypto-interface/connector"
 	"github.com/stanche/crypto-interface/importer"
 	"github.com/wedancedalot/decimal"
 	"math/big"
@@ -32,8 +32,8 @@ type (
 		block       *wire.MsgBlock
 		txMsg       *wire.MsgTx
 		blockNumber uint64
-		currency    connectors.Currency
-		addresses   []connectors.Address
+		currency    connector.Currency
+		addresses   []connector.Address
 	}
 
 	// processTxData is used for processTransaction func as return
@@ -71,17 +71,17 @@ func NewBlockChainImporter(node importer.NodeParams, chainParams chaincfg.Params
 // getBlockByNumber returns btcd/wire MsgBlock as well
 func (bci BtcBlockChainImporter) getBlockByNumber(number uint64) (block *wire.MsgBlock, err error) {
 	if bci.client == nil {
-		return nil, connectors.ErrClientNil
+		return nil, connector.ErrClientNil
 	}
 
 	blockHash, err := bci.client.GetBlockHash(int64(number))
 	if blockHash == nil || err != nil {
-		return nil, connectors.ErrNotFound
+		return nil, connector.ErrNotFound
 	}
 
 	block, err = bci.client.GetBlock(blockHash)
 	if block == nil || err != nil {
-		return nil, connectors.ErrNotFound
+		return nil, connector.ErrNotFound
 	}
 
 	return block, nil
@@ -97,7 +97,7 @@ func (bci BtcBlockChainImporter) GetBlockHashesByNumber(number uint64) (hash, pr
 }
 
 // ProcessBlock do all importer logic and returns operations with given addresses list included in a given block
-func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []connectors.Currency, addresses []connectors.Address) (operations []importer.Operation, err error) {
+func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []connector.Currency, addresses []connector.Address) (operations []importer.Operation, err error) {
 	//BTC importer only supports one currency at all
 	if len(currencies) != 1 || strings.EqualFold(currencies[0].GetCode(), "BTC") {
 		return operations, ErrBadCurrenciesCount
@@ -163,7 +163,7 @@ func (BtcBlockChainImporter) min(a, b int) int {
 }
 
 // isAddressInList returns true if target address in given addresses
-func (BtcBlockChainImporter) isAddressInList(target string, addresses []connectors.Address) bool {
+func (BtcBlockChainImporter) isAddressInList(target string, addresses []connector.Address) bool {
 	for _, a := range addresses {
 		if strings.EqualFold(target, a.GetAddress()) {
 			return true
