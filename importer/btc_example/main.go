@@ -6,12 +6,10 @@ import (
 	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/fanliao/go-promise"
 	"github.com/stanche/crypto-interface/connectors"
 	"github.com/stanche/crypto-interface/importer"
 	"github.com/wedancedalot/decimal"
 	"math/big"
-	"reflect"
 	"strings"
 )
 
@@ -36,6 +34,11 @@ type (
 		blockNumber uint64
 		currency    connectors.Currency
 		addresses   []connectors.Address
+	}
+
+	processTxResponse struct {
+		ops []importer.Operation
+		err error
 	}
 )
 
@@ -106,42 +109,45 @@ func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []c
 	// Scan all transactions inside a block
 	i := 0
 	txCount := len(block.Transactions)
+
+	var (
+		lastResp processTxResponse
+		errors   []error
+	)
 	for i < txCount {
 		batchSize := bci.min(bci.txBatchSize, txCount-i)
-		tasks := make([]interface{}, batchSize)
-		taskNumber := 0
+		respCh := make(chan processTxResponse, batchSize)
 		for txNumber := i; txNumber < i+batchSize; txNumber++ {
 			txtoProcess := block.Transactions[txNumber]
-			tasks[taskNumber] = func() (r interface{}, err error) {
-				ops, err := bci.processTransaction(processTxData{
+			go func() {
+				respCh <- bci.processTransaction(processTxData{
 					block:       block,
 					txMsg:       txtoProcess,
 					blockNumber: blockNumber,
 					currency:    currencies[0],
 					addresses:   addresses,
 				})
-				return ops, err
+			}()
+		}
+
+		for txNumber := i; txNumber < i+batchSize; txNumber++ {
+			lastResp = <-respCh
+			if lastResp.err != nil {
+				//collect errors
+				errors = append(errors, fmt.Errorf("processTransaction [hash: %s] err: %s", block.Transactions[txNumber].TxHash().String(), lastResp.err.Error()))
 			}
-			taskNumber++
+			operations = append(operations, lastResp.ops...)
 		}
 
-		f := promise.WhenAll(tasks...)
-		result, err := f.Get()
-		if err != nil {
-			e, ok := err.(*promise.AggregateError)
-			if !ok {
-				return operations, fmt.Errorf("unexpected type of error: expected *promise.AggregateError, but received: %s", reflect.TypeOf(err))
-			}
-			return operations, e.InnerErrs[0]
-		}
+		i += batchSize
+	}
 
-		ops, ok := result.([]importer.Operation)
-		if !ok {
-			return operations, fmt.Errorf("unexpected type of result: expected []importers.Operation, but received: %s", reflect.TypeOf(result))
+	if len(errors) > 0 { //return all collected errors at once
+		var errMsg string
+		for _, err := range errors {
+			errMsg += fmt.Sprintf("%#v \n", err)
 		}
-
-		operations = append(operations, ops...)
-		i = i + batchSize
+		return operations, fmt.Errorf(errMsg)
 	}
 
 	return operations, nil
@@ -166,11 +172,13 @@ func (bci BtcBlockChainImporter) isAddressInList(target string, addresses []conn
 }
 
 // processTransaction returns operations on given addresses list, which included in transaction
-func (bci BtcBlockChainImporter) processTransaction(d processTxData) (operations []importer.Operation, err error) {
+func (bci BtcBlockChainImporter) processTransaction(d processTxData) processTxResponse {
 	parsedOutputs, err := bci.parseOutputs(d.txMsg.TxOut)
 	if err != nil {
-		return operations, fmt.Errorf("btc processTransaction.ParseOutputs %s : %v", d.txMsg.TxHash(), err.Error())
+		return processTxResponse{ops: nil, err: fmt.Errorf("btc processTransaction.ParseOutputs %s : %v", d.txMsg.TxHash(), err.Error())}
 	}
+
+	var operations []importer.Operation
 	for _, output := range parsedOutputs {
 		if bci.isAddressInList(output.Address, d.addresses) {
 			operations = append(operations, importer.Operation{
@@ -182,7 +190,7 @@ func (bci BtcBlockChainImporter) processTransaction(d processTxData) (operations
 		}
 	}
 
-	return operations, nil
+	return processTxResponse{ops: operations, err: err}
 }
 
 // parseOutputs parses all BTC outputs and returns in convenient format outputParsed

@@ -230,11 +230,10 @@ func TestBtcBlockChainImporter_processTransaction(t *testing.T) {
 		d processTxData
 	}
 	tests := []struct {
-		name           string
-		fields         fields
-		args           args
-		wantOperations []importer.Operation
-		wantErr        bool
+		name   string
+		fields fields
+		args   args
+		want   processTxResponse
 	}{
 		// TODO: Add test cases.
 	}
@@ -245,13 +244,8 @@ func TestBtcBlockChainImporter_processTransaction(t *testing.T) {
 				chainParams: tt.fields.chainParams,
 				txBatchSize: tt.fields.txBatchSize,
 			}
-			gotOperations, err := bci.processTransaction(tt.args.d)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("BtcBlockChainImporter.processTransaction() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(gotOperations, tt.wantOperations) {
-				t.Errorf("BtcBlockChainImporter.processTransaction() = %v, want %v", gotOperations, tt.wantOperations)
+			if got := bci.processTransaction(tt.args.d); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("BtcBlockChainImporter.processTransaction() = %v, want %v", got, tt.want)
 			}
 		})
 	}
