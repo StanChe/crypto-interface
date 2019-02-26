@@ -47,23 +47,23 @@ type (
 
 	BtcChainConnector struct {
 		connector.Connector
-		NodeURL    string
-		Client     *rpcclient.Client
-		chain      *chaincfg.Params
-		Decoder    AddressDecoder
-		CoreClient *Client
+		NodeURL     string
+		Client      *rpcclient.Client
+		chain       *chaincfg.Params
+		Decoder     AddressDecoder
+		CoreClient  *Client
+		txBatchSize int
 	}
 )
 
 func clientUrl(cfg connector.NodeParams) (string, error) {
-	if cfg.Host != "" && cfg.Port != 0 && cfg.User != "" && cfg.Password != "" {
-		return fmt.Sprintf("http://%s:%s@%s:%d", cfg.User, cfg.Password, cfg.Host, cfg.Port), nil
+	if cfg.GetHost() != "" && cfg.GetPort() != 0 && cfg.GetUser() != "" && cfg.GetPassword() != "" {
+		return fmt.Sprintf("http://%s:%s@%s:%d", cfg.GetUser(), cfg.GetPassword(), cfg.GetHost(), cfg.GetPort()), nil
 	}
 	return "", fmt.Errorf("invalid config")
 }
 
-func NewBtcChainConnector(walletID uint64, cfg *connector.WalletParams) (IBtcChainConnector, error) {
-
+func NewBtcChainConnector(walletID uint64, cfg *connector.WalletParams, txBatchSize int) (IBtcChainConnector, error) {
 	var err error
 	if cfg == nil || walletID <= 0 {
 		err = fmt.Errorf("Wallet configuration parameters absent")
@@ -79,7 +79,8 @@ func NewBtcChainConnector(walletID uint64, cfg *connector.WalletParams) (IBtcCha
 			Currency:   cfg.Currency,
 			WalletType: cfg.Type,
 		},
-		chain: &btcchaincfg.TestNet3Params,
+		chain:       &btcchaincfg.TestNet3Params,
+		txBatchSize: txBatchSize,
 	}
 	connector.DecoderSet(connector.DecodeAddress)
 
@@ -88,9 +89,9 @@ func NewBtcChainConnector(walletID uint64, cfg *connector.WalletParams) (IBtcCha
 		return nil, err
 	}
 	connector.Client, err = rpcclient.New(&rpcclient.ConnConfig{
-		Host:         fmt.Sprintf("%s:%d", cfg.Node.Host, cfg.Node.Port),
-		User:         cfg.Node.User,
-		Pass:         cfg.Node.Password,
+		Host:         fmt.Sprintf("%s:%d", cfg.Node.GetHost(), cfg.Node.GetPort()),
+		User:         cfg.Node.GetUser(),
+		Pass:         cfg.Node.GetPassword(),
 		HTTPPostMode: true, // Bitcoin core only supports HTTP POST mode
 		DisableTLS:   true, // Bitcoin core does not provide TLS by default
 	}, nil)
@@ -117,13 +118,13 @@ type coreBalance struct {
 	// received ...
 }
 
-func (c *BtcChainConnector) balance(addr string) (int64, error) {
+func (bcc *BtcChainConnector) balance(addr string) (int64, error) {
 
-	if c.CoreClient == nil || c.CoreClient.URL == "" {
+	if bcc.CoreClient == nil || bcc.CoreClient.URL == "" {
 		return 0, fmt.Errorf("coreClient not initialized")
 	}
 	data := fmt.Sprintf(`{"jsonrpc": "1.0", "id":"core", "method": "getaddressbalance", "params": ["%s"] }`, addr)
-	resp, err := c.CoreClient.send(data)
+	resp, err := bcc.CoreClient.send(data)
 	if err != nil {
 		return 0, err
 	}
@@ -135,7 +136,7 @@ func (c *BtcChainConnector) balance(addr string) (int64, error) {
 	return res.Balance, nil
 }
 
-func (c *BtcChainConnector) BalanceGet(currency connector.Currency, addresses ...string) (b connector.AddressBalance, err error) {
+func (bcc *BtcChainConnector) BalanceGet(currency connector.Currency, addresses ...string) (b connector.AddressBalance, err error) {
 
 	if len(addresses) == 0 {
 		// log.Errorf("btcChainConnector does not support BalanceGet with empty addresses list")
@@ -145,15 +146,15 @@ func (c *BtcChainConnector) BalanceGet(currency connector.Currency, addresses ..
 	var valid bool
 	var balance int64
 	for _, addr := range addresses {
-		valid, err = c.ValidateAddress(addr)
+		valid, err = bcc.ValidateAddress(addr)
 		if err != nil {
-			// log.Errorf("%s.ChainConnector.BalanceGet.ValidateAddress: %s", c.CurrencyCode(), err.Error())
+			// log.Errorf("%s.ChainConnector.BalanceGet.ValidateAddress: %s", bcc.CurrencyCode(), err.Error())
 			return b, err
 		}
 		if !valid {
 			continue
 		}
-		balance, err = c.balance(addr)
+		balance, err = bcc.balance(addr)
 		if err != nil {
 			// log.Errorf("balance(%s): %s", addr, err.Error())
 			return b, err
@@ -167,27 +168,27 @@ func (c *BtcChainConnector) BalanceGet(currency connector.Currency, addresses ..
 
 }
 
-func (c *BtcChainConnector) ValidateAddress(address string) (bool, error) {
-	addr, err := btcutil.DecodeAddress(address, c.chain)
+func (bcc *BtcChainConnector) ValidateAddress(address string) (bool, error) {
+	addr, err := btcutil.DecodeAddress(address, bcc.chain)
 	if err != nil {
-		// log.Errorf("ValidateAddress[%s] (%s): %s", c.Currency, address, err.Error())
+		// log.Errorf("ValidateAddress[%s] (%s): %s", bcc.Currency, address, err.Error())
 		return false, nil
 	}
-	return addr.IsForNet(c.chain), nil
+	return addr.IsForNet(bcc.chain), nil
 }
 
-func (c *BtcChainConnector) DecodeAddress(addr string) (btcutil.Address, error) {
-	return btcutil.DecodeAddress(addr, c.chain)
+func (bcc *BtcChainConnector) DecodeAddress(addr string) (btcutil.Address, error) {
+	return btcutil.DecodeAddress(addr, bcc.chain)
 }
 
-func (c *BtcChainConnector) DecoderSet(decoder AddressDecoder) {
-	c.Decoder = decoder
+func (bcc *BtcChainConnector) DecoderSet(decoder AddressDecoder) {
+	bcc.Decoder = decoder
 }
 
-func (c *BtcChainConnector) ParseOutputs(txOuts []*wire.TxOut) ([]*connector.OutputParsed, error) {
+func (bcc *BtcChainConnector) ParseOutputs(txOuts []*wire.TxOut) ([]*connector.OutputParsed, error) {
 	var outputs []*connector.OutputParsed
 	for i, txOut := range txOuts {
-		_, addresses, _, err := txscript.ExtractPkScriptAddrs(txOut.PkScript, c.chain)
+		_, addresses, _, err := txscript.ExtractPkScriptAddrs(txOut.PkScript, bcc.chain)
 		if err != nil {
 			// log.Errorf("ExtractTxOutAddresses %s", err.Error())
 			//todo find out what to do in case if we cnnot parse output address
@@ -205,26 +206,26 @@ func (c *BtcChainConnector) ParseOutputs(txOuts []*wire.TxOut) ([]*connector.Out
 	return outputs, nil
 }
 
-func (c *BtcChainConnector) CreateRawTransaction(inputs []btcjson.TransactionInput,
+func (bcc *BtcChainConnector) CreateRawTransaction(inputs []btcjson.TransactionInput,
 	amounts map[btcutil.Address]btcutil.Amount) (*wire.MsgTx, error) {
 
-	return c.Client.CreateRawTransaction(inputs, amounts, nil)
+	return bcc.Client.CreateRawTransaction(inputs, amounts, nil)
 }
 
-func (c *BtcChainConnector) GetBlockByNumber(number uint64) (*wire.MsgBlock, error) {
-	blockHash, err := c.Client.GetBlockHash(int64(number))
+func (bcc *BtcChainConnector) GetBlockByNumber(number uint64) (*wire.MsgBlock, error) {
+	blockHash, err := bcc.Client.GetBlockHash(int64(number))
 	if blockHash == nil || err != nil {
 		return nil, connector.ErrNotFound
 	}
 
-	block, err := c.Client.GetBlock(blockHash)
+	block, err := bcc.Client.GetBlock(blockHash)
 	if block == nil || err != nil {
 		return nil, connector.ErrNotFound
 	}
 	return block, nil
 }
-func (c *BtcChainConnector) GetTransactionByHash(hash chainhash.Hash) (*btcjson.TxRawResult, bool, error) {
-	tx, err := c.Client.GetRawTransactionVerbose(&hash)
+func (bcc *BtcChainConnector) GetTransactionByHash(hash chainhash.Hash) (*btcjson.TxRawResult, bool, error) {
+	tx, err := bcc.Client.GetRawTransactionVerbose(&hash)
 
 	pending := false
 	if err == nil && tx != nil {
@@ -234,14 +235,14 @@ func (c *BtcChainConnector) GetTransactionByHash(hash chainhash.Hash) (*btcjson.
 }
 
 // TxStatus returns transaction status by TxId(hash)
-func (c *BtcChainConnector) TxStatus(txID string, blockNo uint64) (*connector.TxStatusStruct, error) {
+func (bcc *BtcChainConnector) TxStatus(txID string, blockNo uint64) (*connector.TxStatusStruct, error) {
 
 	txHash, err := chainhash.NewHashFromStr(txID)
 	if err != nil {
 		return nil, fmt.Errorf("btc wallet Client NewHashFromStr failed: %s", err.Error())
 	}
 
-	tx, err := c.Client.GetRawTransactionVerbose(txHash)
+	tx, err := bcc.Client.GetRawTransactionVerbose(txHash)
 	if err != nil {
 		return nil, fmt.Errorf("btc wallet Client GetRawTransactionVerbose failed: %s", err.Error())
 	}
@@ -262,7 +263,7 @@ func (c *BtcChainConnector) TxStatus(txID string, blockNo uint64) (*connector.Tx
 	return &status, nil
 }
 
-func (c *BtcChainConnector) TxBuild(walletData *connector.WalletSignStruct,
+func (bcc *BtcChainConnector) TxBuild(walletData *connector.WalletSignStruct,
 	utxosIn interface{}, output []connector.OutStruct) (string, error) {
 
 	n := len(walletData.XPubs)
@@ -302,14 +303,14 @@ func (c *BtcChainConnector) TxBuild(walletData *connector.WalletSignStruct,
 	var address btcutil.Address
 	var err error
 	for addr, amt := range values {
-		address, err = c.Decoder(addr)
+		address, err = bcc.Decoder(addr)
 		if err != nil {
 			return "", err
 		}
 		amounts[address] = btcutil.Amount(amt.Mul(decimal.New(1, int32(btcPrecision))).IntPart())
 	}
 
-	msg, err := c.CreateRawTransaction(inputs, amounts)
+	msg, err := bcc.CreateRawTransaction(inputs, amounts)
 	if err != nil {
 		return "", err
 	}
@@ -426,7 +427,7 @@ func ScriptBuild(txIn *wire.TxIn, index uint32,
 	return nil
 }
 
-func (c *BtcChainConnector) TxBroadcast(txHex string) (string, error) {
+func (bcc *BtcChainConnector) TxBroadcast(txHex string) (string, error) {
 	txBytes, err := hex.DecodeString(txHex)
 	if err != nil {
 		return "", err
@@ -439,9 +440,9 @@ func (c *BtcChainConnector) TxBroadcast(txHex string) (string, error) {
 		return "", err
 	}
 
-	hash, err := c.Client.SendRawTransaction(&msg, false)
+	hash, err := bcc.Client.SendRawTransaction(&msg, false)
 	if err != nil {
-		// log.Errorf("SendRawTransaction failed for %s: %s", c.CurrencyCode(), err.Error())
+		// log.Errorf("SendRawTransaction failed for %s: %s", bcc.CurrencyCode(), err.Error())
 		if strings.Contains(err.Error(), scriptVerifyFailureErr) {
 			return "", connector.TxPermanentFailure
 		}
@@ -451,7 +452,7 @@ func (c *BtcChainConnector) TxBroadcast(txHex string) (string, error) {
 }
 
 // TxRebuild - combine parsed hex Tx with the signatures
-func (c *BtcChainConnector) TxRebuild(txHex string, signatures connector.TxSignatures) (string, error) {
+func (bcc *BtcChainConnector) TxRebuild(txHex string, signatures connector.TxSignatures) (string, error) {
 	return TxRebuildBtc(txHex, signatures)
 }
 

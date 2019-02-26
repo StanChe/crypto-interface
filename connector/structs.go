@@ -7,12 +7,6 @@ import (
 )
 
 type (
-	NodeParams struct {
-		Host     string
-		Port     int
-		User     string
-		Password string
-	}
 	WalletParams struct {
 		Currency       string
 		Active         bool
@@ -76,6 +70,15 @@ type (
 		Conf           uint64
 		Fee            *big.Int
 		IsIrreversible bool
+	}
+
+	Operation struct {
+		TxId         string
+		TxOut        uint
+		TxMemo       string
+		ToAddress    string
+		CurrencyCode string
+		Amount       decimal.Decimal
 	}
 )
 

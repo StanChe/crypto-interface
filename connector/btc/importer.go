@@ -1,26 +1,17 @@
-package btc_example
+package btc
 
 import (
 	"fmt"
 	"math/big"
 	"strings"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/stanche/crypto-interface/connector"
-	"github.com/stanche/crypto-interface/importer"
 	"github.com/wedancedalot/decimal"
 )
 
 type (
-	BtcBlockChainImporter struct {
-		client      *rpcclient.Client
-		chainParams chaincfg.Params
-		txBatchSize int
-	}
-
 	// OutputParsed - describes return of TxParse
 	OutputParsed struct {
 		Address string
@@ -39,58 +30,16 @@ type (
 
 	// processTxData is used for processTransaction func as return
 	processTxResponse struct {
-		ops []importer.Operation
+		ops []connector.Operation
 		err error
 	}
 )
 
 var ErrBadCurrenciesCount = fmt.Errorf("bad currencies count provided: Bitcoin import was only supporting one currency BTC")
 
-// NewBlockChainImporter creates new instance of importer.BlockChainImporter as BtcBlockChainImporter
-func NewBlockChainImporter(node importer.NodeParams, chainParams chaincfg.Params, txBatchSize int) (importer.BlockChainImporter, error) {
-	cl, err := rpcclient.New(&rpcclient.ConnConfig{
-		Host:         fmt.Sprintf("%s:%d", node.GetHost(), node.GetPort()),
-		User:         node.GetUser(),
-		Pass:         node.GetPassword(),
-		HTTPPostMode: true, // Bitcoin core only supports HTTP POST mode
-		DisableTLS:   true, // Bitcoin core does not provide TLS by default
-	}, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to Bitcoin node: %v", err.Error())
-	}
-	if cl == nil {
-		return nil, fmt.Errorf("failed to connect to Bitcoin node: client is nil")
-	}
-
-	return BtcBlockChainImporter{
-		client:      cl,
-		chainParams: chainParams,
-		txBatchSize: txBatchSize,
-	}, nil
-}
-
-// getBlockByNumber returns btcd/wire MsgBlock as well
-func (bci BtcBlockChainImporter) getBlockByNumber(number uint64) (block *wire.MsgBlock, err error) {
-	if bci.client == nil {
-		return nil, connector.ErrClientNil
-	}
-
-	blockHash, err := bci.client.GetBlockHash(int64(number))
-	if blockHash == nil || err != nil {
-		return nil, connector.ErrNotFound
-	}
-
-	block, err = bci.client.GetBlock(blockHash)
-	if block == nil || err != nil {
-		return nil, connector.ErrNotFound
-	}
-
-	return block, nil
-}
-
 // GetBlockHashesByNumber returns block hash and previous block gash as strings
-func (bci BtcBlockChainImporter) GetBlockHashesByNumber(number uint64) (hash, prevHash string, err error) {
-	block, err := bci.getBlockByNumber(number)
+func (bcc BtcChainConnector) GetBlockHashesByNumber(number uint64) (hash, prevHash string, err error) {
+	block, err := bcc.GetBlockByNumber(number)
 	if err != nil {
 		return "", "", err
 	}
@@ -98,13 +47,13 @@ func (bci BtcBlockChainImporter) GetBlockHashesByNumber(number uint64) (hash, pr
 }
 
 // ProcessBlock do all importer logic and returns operations with given addresses list included in a given block
-func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []connector.Currency, addresses []connector.Address) (operations []importer.Operation, err error) {
+func (bcc BtcChainConnector) ProcessBlock(blockNumber uint64, currencies []connector.Currency, addresses []connector.Address) (operations []connector.Operation, err error) {
 	//BTC importer only supports one currency at all
 	if len(currencies) != 1 || strings.EqualFold(currencies[0].GetCode(), "BTC") {
 		return operations, ErrBadCurrenciesCount
 	}
 
-	block, err := bci.getBlockByNumber(blockNumber)
+	block, err := bcc.GetBlockByNumber(blockNumber)
 	if err != nil {
 		return operations, err
 	}
@@ -117,12 +66,12 @@ func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []c
 		errors   []error
 	)
 	for i < txCount {
-		batchSize := bci.min(bci.txBatchSize, txCount-i)
+		batchSize := bcc.min(bcc.txBatchSize, txCount-i)
 		respCh := make(chan processTxResponse, batchSize)
 		for txNumber := i; txNumber < i+batchSize; txNumber++ {
 			txtoProcess := block.Transactions[txNumber]
 			go func() {
-				respCh <- bci.processTransaction(processTxData{
+				respCh <- bcc.processTransaction(processTxData{
 					block:       block,
 					txMsg:       txtoProcess,
 					blockNumber: blockNumber,
@@ -156,7 +105,7 @@ func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []c
 }
 
 // min returns a minimal value of a and b
-func (BtcBlockChainImporter) min(a, b int) int {
+func (BtcChainConnector) min(a, b int) int {
 	if a < b {
 		return a
 	}
@@ -164,7 +113,7 @@ func (BtcBlockChainImporter) min(a, b int) int {
 }
 
 // isAddressInList returns true if target address in given addresses
-func (BtcBlockChainImporter) isAddressInList(target string, addresses []connector.Address) bool {
+func (BtcChainConnector) isAddressInList(target string, addresses []connector.Address) bool {
 	for _, a := range addresses {
 		if strings.EqualFold(target, a.GetAddress()) {
 			return true
@@ -175,16 +124,16 @@ func (BtcBlockChainImporter) isAddressInList(target string, addresses []connecto
 }
 
 // processTransaction returns operations on given addresses list, which included in transaction
-func (bci BtcBlockChainImporter) processTransaction(d processTxData) processTxResponse {
-	parsedOutputs, err := bci.parseOutputs(d.txMsg.TxOut)
+func (bcc BtcChainConnector) processTransaction(d processTxData) processTxResponse {
+	parsedOutputs, err := bcc.parseOutputs(d.txMsg.TxOut)
 	if err != nil {
 		return processTxResponse{ops: nil, err: fmt.Errorf("btc processTransaction.ParseOutputs %s : %v", d.txMsg.TxHash(), err.Error())}
 	}
 
-	var operations []importer.Operation
+	var operations []connector.Operation
 	for _, output := range parsedOutputs {
-		if bci.isAddressInList(output.Address, d.addresses) {
-			operations = append(operations, importer.Operation{
+		if bcc.isAddressInList(output.Address, d.addresses) {
+			operations = append(operations, connector.Operation{
 				TxId:      d.txMsg.TxHash().String(),
 				TxOut:     output.TxPos,
 				ToAddress: output.Address,
@@ -197,10 +146,10 @@ func (bci BtcBlockChainImporter) processTransaction(d processTxData) processTxRe
 }
 
 // parseOutputs parses all BTC outputs and returns in convenient format OutputParsed
-func (bci BtcBlockChainImporter) parseOutputs(txOuts []*wire.TxOut) ([]OutputParsed, error) {
+func (bcc BtcChainConnector) parseOutputs(txOuts []*wire.TxOut) ([]OutputParsed, error) {
 	var outputs []OutputParsed
 	for i, txOut := range txOuts {
-		_, addresses, _, err := txscript.ExtractPkScriptAddrs(txOut.PkScript, &bci.chainParams)
+		_, addresses, _, err := txscript.ExtractPkScriptAddrs(txOut.PkScript, bcc.chain)
 		if err != nil {
 			//TODO find out what to do in case if we cannot parse output address
 			continue

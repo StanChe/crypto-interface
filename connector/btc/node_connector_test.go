@@ -16,11 +16,36 @@ import (
 	"github.com/wedancedalot/decimal"
 )
 
-type Currency struct {
-	Code         string
-	Precision    uint8
-	TokenAddress string
-	TokenCode    int64
+type (
+	Currency struct {
+		Code         string
+		Precision    uint8
+		TokenAddress string
+		TokenCode    int64
+	}
+
+	NodeParamsConfig struct {
+		Host     string
+		Port     int
+		User     string
+		Password string
+	}
+)
+
+func (np NodeParamsConfig) GetHost() string {
+	return np.Host
+}
+
+func (np NodeParamsConfig) GetPort() int {
+	return np.Port
+}
+
+func (np NodeParamsConfig) GetUser() string {
+	return np.User
+}
+
+func (np NodeParamsConfig) GetPassword() string {
+	return np.Password
 }
 
 // GetTokenAddress gets the address of the contract of the currency (if applicable). If not applicable - returns an emppty string.
@@ -62,7 +87,7 @@ func Test_nodeConnector_TxBuild(t *testing.T) {
 	amountW3, _ := decimal.NewFromString("9.99")
 	amountW4, _ := decimal.NewFromString("0.99")
 
-	c := connector.NodeParams{
+	c := NodeParamsConfig{
 		Host:     "104.199.25.196",
 		Port:     8341,
 		User:     "attic",
@@ -199,7 +224,7 @@ func Test_nodeConnector_TxRebuild(t *testing.T) {
 		signatures connector.TxSignatures
 	}
 
-	c := connector.NodeParams{
+	c := NodeParamsConfig{
 		Host:     "104.199.25.196",
 		Port:     8341,
 		User:     "attic",
@@ -263,7 +288,7 @@ func TestBtcConnector_IntegrationTest(t *testing.T) {
 	t.Skip("BTC Node IConnector integration test is skipped") //comment this line to run tests
 
 	//Given
-	nodeConfig := &connector.NodeParams{
+	nodeConfig := &NodeParamsConfig{
 		Host:     "104.199.25.196",
 		Port:     8361,
 		User:     "attic",
@@ -337,7 +362,7 @@ func Test_Decode_Encode_OMNI_tx(t *testing.T) {
 
 func TestBtcConnector_ValidateAddress(t *testing.T) {
 	//Given
-	nodeConfig := &connector.NodeParams{
+	nodeConfig := &NodeParamsConfig{
 		Host:     "104.199.25.196",
 		Port:     8331,
 		User:     "attic",
@@ -384,13 +409,13 @@ func TestBtcChainConnector_balance(t *testing.T) {
 		t.Skip("BTC Node IConnector integration test is skipped") //comment this line to run tests
 		// port 25012 from cryptagio-coins-testnet-0 shall be mapped into local
 
-		nodeConfig := connector.NodeParams{
+		nodeConfig := NodeParamsConfig{
 			Host:     "127.0.0.1",
 			Port:     23002,
 			User:     "attic",
 			Password: "8Wsujmq4JND0565itTqt",
 		}
-		coreConfig := connector.NodeParams{
+		coreConfig := NodeParamsConfig{
 			Host:     "127.0.0.1",
 			Port:     25012,
 			User:     "attic",
@@ -405,7 +430,7 @@ func TestBtcChainConnector_balance(t *testing.T) {
 
 		currency := Currency{}
 		walletID := uint64(1)
-		conn, _ := NewBtcChainConnector(walletID, config)
+		conn, _ := NewBtcChainConnector(walletID, config, 100)
 
 		addressDev := "mqpaRTpgKSnbeaqWmS9cwEobjtFVHsmjuX"
 		expectedBalance := int64(299994314)
@@ -417,7 +442,7 @@ func TestBtcChainConnector_balance(t *testing.T) {
 		assert.Equal(t, 0, cmp, "unexpected value")
 	})
 	t.Run("it should return error if core client not set", func(t *testing.T) {
-		nodeConfig := connector.NodeParams{
+		nodeConfig := NodeParamsConfig{
 			Host:     "127.0.0.1",
 			Port:     23002,
 			User:     "attic",
@@ -431,7 +456,7 @@ func TestBtcChainConnector_balance(t *testing.T) {
 			NodeTimeoutSec: 30,
 		}
 		addressDev := "mqpaRTpgKSnbeaqWmS9cwEobjtFVHsmjuX"
-		conn, _ := NewBtcChainConnector(walletID, config)
+		conn, _ := NewBtcChainConnector(walletID, config, 100)
 		_, err := conn.BalanceGet(currency, addressDev)
 		assert.NotNil(t, err, "expect error")
 		assert.Containsf(t, err.Error(), "coreClient not initialized", "should contain error message about core client")

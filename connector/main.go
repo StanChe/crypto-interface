@@ -21,6 +21,14 @@ type (
 		GetTokenCode() int64
 	}
 
+	// NodeParams provides params of connection to node
+	NodeParams interface {
+		GetHost() string
+		GetPort() int
+		GetUser() string
+		GetPassword() string
+	}
+
 	// Address provides info about the wallet address
 	Address interface {
 		// GetAddress is the address itself
@@ -56,7 +64,12 @@ type (
 		TxBroadcast(txHex string) (txHash string, err error)
 	}
 
-	// IConnector defines wallet (node) interface
+	BlockChainImporter interface {
+		GetBlockHashesByNumber(number uint64) (hash, prevHash string, err error)
+		ProcessBlock(blockNumber uint64, currencies []Currency, addresses []Address) (operations []Operation, err error)
+	}
+
+	// Connector defines wallet (node) interface
 	IConnector interface {
 		TxGetter
 		TxBuilder
