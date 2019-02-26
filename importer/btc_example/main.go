@@ -1,7 +1,6 @@
 package btc_example
 
 import (
-	"bitbucket.org/atticlab/cryptagio-common/log"
 	"fmt"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/rpcclient"
@@ -131,18 +130,14 @@ func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []c
 		if err != nil {
 			e, ok := err.(*promise.AggregateError)
 			if !ok {
-				castingError := fmt.Errorf("unexpected type of error: expected *promise.AggregateError, but received: %s", reflect.TypeOf(err))
-				log.Error(castingError.Error())
-				return operations, castingError
+				return operations, fmt.Errorf("unexpected type of error: expected *promise.AggregateError, but received: %s", reflect.TypeOf(err))
 			}
 			return operations, e.InnerErrs[0]
 		}
 
 		ops, ok := result.([]importer.Operation)
 		if !ok {
-			castingError := fmt.Errorf("unexpected type of result: expected []importers.Operation, but received: %s", reflect.TypeOf(result))
-			log.Error(castingError.Error())
-			return operations, castingError
+			return operations, fmt.Errorf("unexpected type of result: expected []importers.Operation, but received: %s", reflect.TypeOf(result))
 		}
 
 		operations = append(operations, ops...)
@@ -174,8 +169,7 @@ func (bci BtcBlockChainImporter) isAddressInList(target string, addresses []conn
 func (bci BtcBlockChainImporter) processTransaction(d processTxData) (operations []importer.Operation, err error) {
 	parsedOutputs, err := bci.parseOutputs(d.txMsg.TxOut)
 	if err != nil {
-		log.Errorf("btc processTransaction.ParseOutputs %s : %v", d.txMsg.TxHash(), err.Error())
-		return operations, err
+		return operations, fmt.Errorf("btc processTransaction.ParseOutputs %s : %v", d.txMsg.TxHash(), err.Error())
 	}
 	for _, output := range parsedOutputs {
 		if bci.isAddressInList(output.Address, d.addresses) {
@@ -197,8 +191,7 @@ func (bci BtcBlockChainImporter) parseOutputs(txOuts []*wire.TxOut) ([]outputPar
 	for i, txOut := range txOuts {
 		_, addresses, _, err := txscript.ExtractPkScriptAddrs(txOut.PkScript, &bci.chainParams)
 		if err != nil {
-			log.Errorf("ExtractTxOutAddresses %s", err.Error())
-			//todo find out what to do in case if we cannot parse output address
+			//TODO find out what to do in case if we cannot parse output address
 			continue
 		}
 
