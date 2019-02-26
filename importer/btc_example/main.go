@@ -48,9 +48,9 @@ var ErrBadCurrenciesCount = fmt.Errorf("bad currencies count provided: Bitcoin i
 // NewBlockChainImporter creates new instance of importer.BlockChainImporter as BtcBlockChainImporter
 func NewBlockChainImporter(node importer.NodeParams, chainParams chaincfg.Params, txBatchSize int) (importer.BlockChainImporter, error) {
 	cl, err := rpcclient.New(&rpcclient.ConnConfig{
-		Host:         fmt.Sprintf("%s:%d", node.Host, node.Port),
-		User:         node.User,
-		Pass:         node.Password,
+		Host:         fmt.Sprintf("%s:%d", node.GetHost(), node.GetPort()),
+		User:         node.GetUser(),
+		Pass:         node.GetPassword(),
 		HTTPPostMode: true, // Bitcoin core only supports HTTP POST mode
 		DisableTLS:   true, // Bitcoin core does not provide TLS by default
 	}, nil)
