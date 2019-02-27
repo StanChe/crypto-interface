@@ -1,4 +1,4 @@
-package btc
+package btc_example
 
 import (
 	"github.com/btcsuite/btcd/chaincfg"

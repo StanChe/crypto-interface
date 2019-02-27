@@ -1,4 +1,4 @@
-package btc
+package btc_example
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/stanche/crypto-interface/connector"
-	"github.com/stanche/crypto-interface/connector/btc/script"
+	"github.com/stanche/crypto-interface/connector/btc_example/script"
 
 	"github.com/wedancedalot/decimal"
 

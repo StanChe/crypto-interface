@@ -16,13 +16,13 @@ import (
 	"github.com/btcsuite/btcutil"
 
 	"github.com/stanche/crypto-interface/connector"
-	"github.com/stanche/crypto-interface/connector/btc"
+	"github.com/stanche/crypto-interface/connector/btc_example"
 )
 
 type (
 	bchChainConnector struct {
 		connector.Connector
-		ibtc    btc.IBtcChainConnector
+		ibtc    btc_example.IBtcChainConnector
 		chain   *chaincfg.Params
 		regtest bool
 	}
@@ -30,8 +30,8 @@ type (
 
 // NewChainConnector returns the IBtcChainConnector interface
 // to use btc importer as ltc one
-func NewChainConnector(walletID uint64, cfg *connector.WalletParams) (btc.IBtcChainConnector, error) {
-	iBtcConnector, err := btc.NewBtcChainConnector(walletID, cfg)
+func NewChainConnector(walletID uint64, cfg *connector.WalletParams) (btc_example.IBtcChainConnector, error) {
+	iBtcConnector, err := btc_example.NewBtcChainConnector(walletID, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -69,13 +69,13 @@ func (c *bchChainConnector) DecodeAddress(addr string) (btcutil.Address, error) 
 		return nil, err
 	}
 
-	bchAddr := btc.CoinAddress{
+	bchAddr := btc_example.CoinAddress{
 		Addr: legacyAddress,
 	}
 	return &bchAddr, err
 }
 
-func (c *bchChainConnector) DecoderSet(decoder btc.AddressDecoder) {
+func (c *bchChainConnector) DecoderSet(decoder btc_example.AddressDecoder) {
 	//
 }
 
@@ -134,5 +134,5 @@ func (c *bchChainConnector) TxBroadcast(txHex string) (string, error) {
 
 // TxRebuild - combine parsed hex Tx with the signatures
 func (c *bchChainConnector) TxRebuild(txHex string, signatures connector.TxSignatures) (string, error) {
-	return btc.TxRebuildBtc(txHex, signatures)
+	return btc_example.TxRebuildBtc(txHex, signatures)
 }

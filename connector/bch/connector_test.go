@@ -7,7 +7,7 @@ import (
 
 	bchchaincfg "github.com/bchsuite/bchd/chaincfg"
 	"github.com/stanche/crypto-interface/connector"
-	"github.com/stanche/crypto-interface/connector/btc"
+	"github.com/stanche/crypto-interface/connector/btc_example"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/wedancedalot/decimal"
@@ -41,7 +41,7 @@ func Test_nodeConnector_TxBuild(t *testing.T) {
 		},
 		ChainConfig: "regtest",
 	}
-	iBtcConnector, err := btc.NewBtcChainConnector(walletID, walletConfig)
+	iBtcConnector, err := btc_example.NewBtcChainConnector(walletID, walletConfig)
 	if err != nil {
 		// log.Fatalf("failed to connect to Bitcoin node: %v", err.Error())
 	}
@@ -168,7 +168,7 @@ func TestBchConnector_IntegrationTest(t *testing.T) {
 		},
 		ChainConfig: "regtest",
 	}
-	iBtcConnector, err := btc.NewBtcChainConnector(walletID, walletConfig)
+	iBtcConnector, err := btc_example.NewBtcChainConnector(walletID, walletConfig)
 	if err != nil {
 		// log.Fatalf("failed to connect to Bitcoin node: %v", err.Error())
 	}
@@ -221,7 +221,7 @@ func TestBchConnector_ValidateAddress(t *testing.T) {
 		},
 		ChainConfig: "regtest",
 	}
-	iBtcConnector, err := btc.NewBtcChainConnector(walletID, walletConfig)
+	iBtcConnector, err := btc_example.NewBtcChainConnector(walletID, walletConfig)
 	if err != nil {
 		// log.Fatalf("failed to connect to Bitcoin node: %v", err.Error())
 	}
@@ -274,7 +274,7 @@ func Test_nodeConnector_TxRebuild(t *testing.T) {
 		},
 		ChainConfig: "regtest",
 	}
-	iBtcConnector, err := btc.NewBtcChainConnector(walletID, walletConfig)
+	iBtcConnector, err := btc_example.NewBtcChainConnector(walletID, walletConfig)
 	if err != nil {
 		// log.Fatalf("failed to connect to Bitcoin node: %v", err.Error())
 	}
