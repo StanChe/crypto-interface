@@ -2,6 +2,7 @@ package btc_example
 
 import (
 	"fmt"
+	"github.com/Nargott/goutils"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
@@ -114,7 +115,7 @@ func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []c
 		errors   []error
 	)
 	for i < txCount {
-		batchSize := bci.min(bci.txBatchSize, txCount-i)
+		batchSize := goutils.Min(bci.txBatchSize, txCount-i)
 		respCh := make(chan processTxResponse, batchSize)
 		for txNumber := i; txNumber < i+batchSize; txNumber++ {
 			txtoProcess := block.Transactions[txNumber]
@@ -150,14 +151,6 @@ func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []c
 	}
 
 	return operations, nil
-}
-
-// min returns a minimal value of a and b
-func (BtcBlockChainImporter) min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // isAddressInList returns true if target address in given addresses
