@@ -37,6 +37,11 @@ type (
 		GetTag() string
 	}
 
+	// AddressLister is interface for work with list of Addresses
+	AddressLister interface {
+		HasAddress(address, tag string) bool
+	}
+
 	// BalanceProvider is an interface for getting sum of the balances on specified addresses.
 	BalanceProvider interface {
 		BalanceGet(currency Currency, address ...string) (AddressBalance, error)
@@ -66,7 +71,7 @@ type (
 
 	BlockChainImporter interface {
 		GetBlockHashesByNumber(number uint64) (hash, prevHash string, err error)
-		ProcessBlock(blockNumber uint64, currencies []Currency, addresses []Address) (operations []Operation, err error)
+		ProcessBlock(blockNumber uint64, currencies []Currency, addresses AddressLister) (operations []Operation, err error)
 	}
 
 	// Connector defines wallet (node) interface
@@ -82,10 +87,10 @@ type (
 	}
 )
 
-// TxPermanentFailure indicates a permanent failure for a tx - their is no need to try to broadcast the tx that returns such error.
-var TxPermanentFailure = fmt.Errorf("transaction failed permanently")
-
 var (
+	// TxPermanentFailure indicates a permanent failure for a tx - their is no need to try to broadcast the tx that returns such error.
+	TxPermanentFailure = fmt.Errorf("transaction failed permanently")
+
 	ErrNotFound  = fmt.Errorf("not found")
 	ErrClientNil = fmt.Errorf("client is nil")
 )

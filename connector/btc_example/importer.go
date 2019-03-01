@@ -33,7 +33,7 @@ type (
 		txMsg       *wire.MsgTx
 		blockNumber uint64
 		currency    connector.Currency
-		addresses   []connector.Address
+		addresses   connector.AddressLister
 	}
 
 	// processTxData is used for processTransaction func as return
@@ -97,7 +97,7 @@ func (bci BtcBlockChainImporter) GetBlockHashesByNumber(number uint64) (hash, pr
 }
 
 // ProcessBlock do all importer logic and returns operations with given addresses list included in a given block
-func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []connector.Currency, addresses []connector.Address) (operations []connector.Operation, err error) {
+func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []connector.Currency, addresses connector.AddressLister) (operations []connector.Operation, err error) {
 	//BTC importer only supports one currency at all
 	if len(currencies) != 1 || strings.EqualFold(currencies[0].GetCode(), "BTC") {
 		return operations, ErrBadCurrenciesCount
@@ -153,17 +153,6 @@ func (bci BtcBlockChainImporter) ProcessBlock(blockNumber uint64, currencies []c
 	return operations, nil
 }
 
-// isAddressInList returns true if target address in given addresses
-func (BtcBlockChainImporter) isAddressInList(target string, addresses []connector.Address) bool {
-	for _, a := range addresses {
-		if strings.EqualFold(target, a.GetAddress()) {
-			return true
-		}
-	}
-
-	return false
-}
-
 // processTransaction returns operations on given addresses list, which included in transaction
 func (bci BtcBlockChainImporter) processTransaction(d processTxData) processTxResponse {
 	parsedOutputs, err := bci.parseOutputs(d.txMsg.TxOut)
@@ -173,7 +162,7 @@ func (bci BtcBlockChainImporter) processTransaction(d processTxData) processTxRe
 
 	var operations []connector.Operation
 	for _, output := range parsedOutputs {
-		if bci.isAddressInList(output.Address, d.addresses) {
+		if d.addresses.HasAddress(output.Address, "") {
 			operations = append(operations, connector.Operation{
 				TxId:      d.txMsg.TxHash().String(),
 				TxOut:     output.TxPos,

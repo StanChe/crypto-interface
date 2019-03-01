@@ -75,7 +75,7 @@ type (
 	Operation struct {
 		TxId         string
 		TxOut        uint
-		TxMemo       string
+		TxTag        string
 		ToAddress    string
 		CurrencyCode string
 		Amount       decimal.Decimal
