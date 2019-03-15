@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"signer/conf"
 
+	"github.com/apex/log"
 	"github.com/stanche/crypto-interface/signer/script"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -22,13 +24,13 @@ type (
 
 	// RawTxInputSignature defines signature function for BTC-class currencies
 	RawTxInputSignature func(tx *wire.MsgTx, idx int, subScript []byte,
-		key *btcec.PrivateKey, amount uint64) ([]byte, error)
+		xpath []uint32, amount uint64, keyProvider KeyProvider) ([]byte, error)
 
 	// BtcSigner defines BTC-like signers
 	BtcSigner struct {
 		currency       string
 		net            *chaincfg.Params
-		keyData        []byte
+		keyProvider    KeyProvider
 		inputSignature RawTxInputSignature
 	}
 
@@ -44,22 +46,34 @@ type (
 )
 
 // NewBtcSigner returns new instance of BtcSigner with the InputSignature function provided
-func NewBtcSigner(currencyCode string, secret []byte, params *chaincfg.Params, inSign RawTxInputSignature) *BtcSigner {
+func NewBtcSigner(currencyCode string, keyProvider KeyProvider, params *chaincfg.Params, inSign RawTxInputSignature) *BtcSigner {
 
 	signer := BtcSigner{
 		currency:       currencyCode,
 		net:            params,
-		keyData:        secret,
+		keyProvider:    keyProvider,
 		inputSignature: inSign,
 	}
 	return &signer
 }
 
 // BtcTxInputSignature defines input signature function for BTC
+// RawTxInSignature returns the serialized ECDSA signature for the input idx of
+// the given transaction, with hashType appended to it.
 func BtcTxInputSignature(tx *wire.MsgTx, idx int, subScript []byte,
-	prvKey *btcec.PrivateKey, amount uint64) ([]byte, error) {
+	xpath []uint32, amount uint64, keyProvider KeyProvider) ([]byte, error) {
+	hashType := txscript.SigHashAll
 
-	return txscript.RawTxInSignature(tx, idx, subScript, txscript.SigHashAll, prvKey)
+	hash, err := txscript.CalcSignatureHash(subScript, hashType, tx, idx)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := keyProvider.SignDerived(hash, xpath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot sign tx input: %s", err)
+	}
+
+	return append(sig, byte(hashType)), nil
 }
 
 // CurrencyType implements Signer interface
@@ -84,18 +98,7 @@ func (signer *BtcSigner) Sign(txHex []byte, signParams []uint64) ([]string, erro
 		return nil, err
 	}
 
-	// build the master key
-	xkey, err := hdkeychain.NewMaster(signer.keyData, &BtcNetParams)
-	if err == nil && xkey == nil {
-		err = fmt.Errorf("xkey is nil")
-	}
-	if err != nil {
-		return nil, err
-	}
-	// clear the key
-	defer xkey.Zero()
-
-	xpubExp, err := xkey.Neuter()
+	xpubExp, err := signer.keyProvider.GetPublicKey()
 	if err == nil && xpubExp == nil {
 		err = fmt.Errorf("xpubExp is nil")
 	}
@@ -151,32 +154,18 @@ func (signer *BtcSigner) Sign(txHex []byte, signParams []uint64) ([]string, erro
 			return nil, err
 		}
 
-		xkeyIndex := xkey
-		xkeyIndex, err = script.ChildFromXkeyPath(xkeyIndex, xpath)
-		if err == nil && xkeyIndex == nil {
-			err = fmt.Errorf("child xkey is nil")
-		}
-		if err != nil {
-			return nil, err
-		}
-		prvKey, err := xkeyIndex.ECPrivKey()
-		if err == nil && prvKey == nil {
-			err = fmt.Errorf("child key is nil")
-		}
-		if err != nil {
-			return nil, err
-		}
 		var amount uint64
 		if flagParams {
 			amount = signParams[indexTxIn]
 		}
-		sign, err := signer.inputSignature(tx.MsgTx(), indexTxIn, msScript, prvKey, amount)
+		sign, err := signer.inputSignature(tx.MsgTx(), indexTxIn, msScript, xpath, amount, signer.keyProvider)
 		if err == nil && sign == nil {
 			err = fmt.Errorf("sign is nil")
 		}
 		if err != nil {
 			return nil, err
 		}
+		log.Debugf("sign[%d]: %s\n", indexTxIn, hex.EncodeToString(sign))
 
 		btcSignature := btcSignature{
 			Ind: index,
@@ -188,32 +177,37 @@ func (signer *BtcSigner) Sign(txHex []byte, signParams []uint64) ([]string, erro
 			return nil, err
 		}
 		signatures[indexTxIn] = base64.StdEncoding.EncodeToString(byteSignature)
+		log.Debugf("sign[%d]: %s", indexTxIn, signatures[indexTxIn])
 	}
 	return signatures, nil
 }
 
 // Public returns Extended Public Key as string
 func (signer *BtcSigner) Public() (interface{}, error) {
-
-	net := &BtcNetParams
-
-	// build the master key
-	xkey, err := hdkeychain.NewMaster(signer.keyData, net)
-	if err == nil && xkey == nil {
-		err = fmt.Errorf("xkey is nil")
-	}
+	net := &conf.BtcNetParams
+	pk, err := signer.keyProvider.GetPublicKey()
 	if err != nil {
+
 		return "", err
 	}
-	// clear the key
-	defer xkey.Zero()
-
-	xpub, err := xkey.Neuter()
-	if err == nil && xpub == nil {
-		err = fmt.Errorf("xpub is nil")
+	if pk == nil {
+		return "", fmt.Errorf("public key is nil")
 	}
+
+	pub := (*btcec.PublicKey)(pk)
+	key := pub.SerializeCompressed()
+	chainCode, err := signer.keyProvider.GetChainCode()
 	if err != nil {
+
 		return "", err
+	}
+
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+
+	xpub := hdkeychain.NewExtendedKey(net.HDPublicKeyID[:], key, chainCode, parentFP, 0, 0, false)
+
+	if xpub == nil {
+		return "", fmt.Errorf("xpub is nil")
 	}
 	return BtcPublicAttributes{
 		XPub: xpub.String(),

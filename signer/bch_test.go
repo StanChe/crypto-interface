@@ -50,8 +50,8 @@ func TestBchSigner_Sign(t *testing.T) {
 		{
 			"Positive getting XPub",
 			func(t *testing.T) {
-
-				signer := NewBtcSigner("BCH", component1, &BtcNetParams, nil)
+				kp := New(component1)
+				signer := NewBtcSigner("BCH", kp, &BtcNetParams, nil)
 
 				xpubExpected := BtcPublicAttributes{
 					XPub: "xpub661MyMwAqRbcEtBNvF5oTnmGFSkZvy6ShetrnbVXTz7hyKYJSNBEtKiiY9HnMeTpLKDFJRYW2QSbNGtCGdpCzwZVSPRKevufqeGBwALkBUK",
@@ -68,7 +68,9 @@ func TestBchSigner_Sign(t *testing.T) {
 		{
 			"Positive integration test (signer-a)",
 			func(t *testing.T) {
-				signer := NewBtcSigner("BCH", component1, &BtcNetParams, BchTxInputSignature)
+				kp := New(component1)
+				signer := NewBtcSigner("BCH", kp, &BtcNetParams, BchTxInputSignature)
+
 				txData := []byte("0200000001d71f0514b1f210d374a7d5c1ea4b24bb199eb0bf1990dc9d8ec5252359b8eff600000000fd16010001ff01ff4d0e01524c57ff0488b21e0000000000000000002231c2b6a33377bc6fb0806268e3627602987340ed2c5e6be0d7be7f24161bae038b8001ff63faf92876effaa8cb774ee8a7260b014922607e191b22fb88d3ef1700000000e80300004c57ff0488b21e000000000000000000d77de533cea4f03402d513aa6b682cd1a69409564a6c4cddb37c8eed4705d0c603d2a614051301da597eea74316d7e404d89d5eb850238c2c1b3d536c5d5c07a5900000000e80300004c57ff0488b21e0000000000000000005c65a74ec6c4922e3df98f50f7c297f62477d123989d9c69ad7de1322cc8394c02cc24a901a51e4e1525343049f11ded77391bf579bc020f08e6956a6eadb13b5a00000000e803000053aeffffffff02e0f83b360000000017a914af70bbab80fb64dbf90b212f4971cc4807d0b8808700e1f505000000001976a914b9e6fa37edaf12df0a0036257e7e89a9abb42fae88ac00000000")
 				signParams := []uint64{
 					1010000000, // 10.1 BCH
@@ -94,7 +96,9 @@ func TestBchSigner_Sign(t *testing.T) {
 		{
 			"Positive integration test (signer-b)",
 			func(t *testing.T) {
-				signer := NewBtcSigner("BCH", component2, &BtcNetParams, BchTxInputSignature)
+				kp := New(component2)
+				signer := NewBtcSigner("BCH", kp, &BtcNetParams, BchTxInputSignature)
+
 				txData := []byte("0200000001d71f0514b1f210d374a7d5c1ea4b24bb199eb0bf1990dc9d8ec5252359b8eff600000000fd16010001ff01ff4d0e01524c57ff0488b21e0000000000000000002231c2b6a33377bc6fb0806268e3627602987340ed2c5e6be0d7be7f24161bae038b8001ff63faf92876effaa8cb774ee8a7260b014922607e191b22fb88d3ef1700000000e80300004c57ff0488b21e000000000000000000d77de533cea4f03402d513aa6b682cd1a69409564a6c4cddb37c8eed4705d0c603d2a614051301da597eea74316d7e404d89d5eb850238c2c1b3d536c5d5c07a5900000000e80300004c57ff0488b21e0000000000000000005c65a74ec6c4922e3df98f50f7c297f62477d123989d9c69ad7de1322cc8394c02cc24a901a51e4e1525343049f11ded77391bf579bc020f08e6956a6eadb13b5a00000000e803000053aeffffffff02e0f83b360000000017a914af70bbab80fb64dbf90b212f4971cc4807d0b8808700e1f505000000001976a914b9e6fa37edaf12df0a0036257e7e89a9abb42fae88ac00000000")
 				signParams := []uint64{
 					1010000000, // 10.1 BCH
@@ -120,7 +124,8 @@ func TestBchSigner_Sign(t *testing.T) {
 		{
 			"Positive signing tx with one input (signer-a)",
 			func(t *testing.T) {
-				signer := NewBtcSigner("BCH", component1, &BtcNetParams, BchTxInputSignature)
+				kp := New(component1)
+				signer := NewBtcSigner("BCH", kp, &BtcNetParams, BchTxInputSignature)
 				txData := []byte("0200000001db172762bebe28c7f79bcea59647ca37e4e38603618bebbf8407bf44b727c58f00000000fd16010001ff01ff4d0e01524c57ff0488b21e0000000000000000002231c2b6a33377bc6fb0806268e3627602987340ed2c5e6be0d7be7f24161bae038b8001ff63faf92876effaa8cb774ee8a7260b014922607e191b22fb88d3ef1700000000020000004c57ff0488b21e000000000000000000d77de533cea4f03402d513aa6b682cd1a69409564a6c4cddb37c8eed4705d0c603d2a614051301da597eea74316d7e404d89d5eb850238c2c1b3d536c5d5c07a5900000000020000004c57ff0488b21e0000000000000000005c65a74ec6c4922e3df98f50f7c297f62477d123989d9c69ad7de1322cc8394c02cc24a901a51e4e1525343049f11ded77391bf579bc020f08e6956a6eadb13b5a000000000200000053aeffffffff019c35f8030000000017a9140a4aa12d8ff4bf38647a21bb9f72c3602fecaa448700000000")
 				signParams := []uint64{
 					110000000, // 1.1 BCH
@@ -146,7 +151,8 @@ func TestBchSigner_Sign(t *testing.T) {
 		{
 			"Positive signing tx with one input (signer-b)",
 			func(t *testing.T) {
-				signer := NewBtcSigner("BCH", component2, &BtcNetParams, BchTxInputSignature)
+				kp := New(component2)
+				signer := NewBtcSigner("BCH", kp, &BtcNetParams, BchTxInputSignature)
 				txData := []byte("0200000001db172762bebe28c7f79bcea59647ca37e4e38603618bebbf8407bf44b727c58f00000000fd16010001ff01ff4d0e01524c57ff0488b21e0000000000000000002231c2b6a33377bc6fb0806268e3627602987340ed2c5e6be0d7be7f24161bae038b8001ff63faf92876effaa8cb774ee8a7260b014922607e191b22fb88d3ef1700000000020000004c57ff0488b21e000000000000000000d77de533cea4f03402d513aa6b682cd1a69409564a6c4cddb37c8eed4705d0c603d2a614051301da597eea74316d7e404d89d5eb850238c2c1b3d536c5d5c07a5900000000020000004c57ff0488b21e0000000000000000005c65a74ec6c4922e3df98f50f7c297f62477d123989d9c69ad7de1322cc8394c02cc24a901a51e4e1525343049f11ded77391bf579bc020f08e6956a6eadb13b5a000000000200000053aeffffffff019c35f8030000000017a9140a4aa12d8ff4bf38647a21bb9f72c3602fecaa448700000000")
 
 				txSign, _ := hex.DecodeString("3045022100c446a6f6281548c2bd11906b9c53d8ad88c1f7ad6124b1ed81e5b35a2fb6efc2022079a9dccd8d19c3abc2cf9bca91ab3fc23552f2a37c5fea850d771e734e475fcc41")
@@ -169,7 +175,9 @@ func TestBchSigner_Sign(t *testing.T) {
 		{
 			"Positive signing tx with one input (signer-c)",
 			func(t *testing.T) {
-				signer := NewBtcSigner("BCH", component3, &BtcNetParams, BchTxInputSignature)
+				kp := New(component3)
+				signer := NewBtcSigner("BCH", kp, &BtcNetParams, BchTxInputSignature)
+
 				txData := []byte("0200000001db172762bebe28c7f79bcea59647ca37e4e38603618bebbf8407bf44b727c58f00000000fd16010001ff01ff4d0e01524c57ff0488b21e0000000000000000002231c2b6a33377bc6fb0806268e3627602987340ed2c5e6be0d7be7f24161bae038b8001ff63faf92876effaa8cb774ee8a7260b014922607e191b22fb88d3ef1700000000020000004c57ff0488b21e000000000000000000d77de533cea4f03402d513aa6b682cd1a69409564a6c4cddb37c8eed4705d0c603d2a614051301da597eea74316d7e404d89d5eb850238c2c1b3d536c5d5c07a5900000000020000004c57ff0488b21e0000000000000000005c65a74ec6c4922e3df98f50f7c297f62477d123989d9c69ad7de1322cc8394c02cc24a901a51e4e1525343049f11ded77391bf579bc020f08e6956a6eadb13b5a000000000200000053aeffffffff019c35f8030000000017a9140a4aa12d8ff4bf38647a21bb9f72c3602fecaa448700000000")
 
 				txSign, _ := hex.DecodeString("304402205be45f0d347e9d454a529a01d3493675b9d8be844908c38d43b3647ecaad412e022037d8e923fa8c12c374e5530bf2b4b29ddd7a355430c8d543b9884b04543d986841")

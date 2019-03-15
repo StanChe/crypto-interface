@@ -2,6 +2,7 @@ package script
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"encoding/binary"
 	"fmt"
 
@@ -218,7 +219,7 @@ func ChildFromXkeyPath(xkey *hdkeychain.ExtendedKey, path []uint32) (*hdkeychain
 // PubkeysIndexPathFromScript extract xpubs from redeen script,
 // searches for the xpub provided and returns it index in the result list,
 // builds and returns a list of unsorted pubkeys
-func PubkeysIndexPathFromScript(redeem []byte, xpub *hdkeychain.ExtendedKey) (
+func PubkeysIndexPathFromScript(redeem []byte, xpub *ecdsa.PublicKey) (
 	m byte, pubkeys []*btcec.PublicKey, index int, xpath []uint32, err error) {
 
 	var pubSample *btcec.PublicKey
@@ -262,10 +263,7 @@ func PubkeysIndexPathFromScript(redeem []byte, xpub *hdkeychain.ExtendedKey) (
 
 	pubkeys = make([]*btcec.PublicKey, n)
 	if xpub != nil {
-		pubSample, err = xpub.ECPubKey()
-		if err != nil {
-			return
-		}
+		pubSample = (*btcec.PublicKey)(xpub)
 	}
 
 	ofs := 1

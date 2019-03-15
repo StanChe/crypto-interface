@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
@@ -14,23 +13,6 @@ import (
 const (
 	sigHashMask = 0x1f
 )
-
-// bip143TxInSignature returns the serialized ECDSA signature for the input idx of
-// the given transaction, with hashType appended to it.
-func bip143TxInSignature(tx *wire.MsgTx, idx int, subScript []byte,
-	hashType txscript.SigHashType, key *btcec.PrivateKey, amt uint64, forkID byte) ([]byte, error) {
-
-	hash, err := bip143SignatureHash(subScript, txscript.NewTxSigHashes(tx), hashType, tx, idx, amt, forkID)
-	if err != nil {
-		return nil, err
-	}
-	signature, err := key.Sign(hash)
-	if err != nil {
-		return nil, fmt.Errorf("cannot sign tx input: %s", err)
-	}
-
-	return append(signature.Serialize(), byte(hashType)|forkID), nil
-}
 
 // calcBip143SignatureHash computes the sighash digest of a transaction's
 // input using the new, optimized digest calculation algorithm defined
