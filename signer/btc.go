@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"signer/conf"
 
 	"github.com/apex/log"
 	"github.com/stanche/crypto-interface/signer/script"
@@ -184,7 +183,7 @@ func (signer *BtcSigner) Sign(txHex []byte, signParams []uint64) ([]string, erro
 
 // Public returns Extended Public Key as string
 func (signer *BtcSigner) Public() (interface{}, error) {
-	net := &conf.BtcNetParams
+	net := &BtcNetParams
 	pk, err := signer.keyProvider.GetPublicKey()
 	if err != nil {
 
